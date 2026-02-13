@@ -1,0 +1,10 @@
+pandas
+numpy
+matplotlib
+seaborn
+sqlalchemy
+pymysql
+mysql-connector-python
+streamlit
+plotly
+python-dotenv
