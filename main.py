@@ -1,47 +1,87 @@
-from src.data_loader import load_data
-from src.data_cleaning import clean_data
-from src.feature_engineering import add_features
-from src.database import upload_to_mysql
-from src.eda import revenue_by_city
-from src.analytics import *
-from src.data_insertion import  insert_data
+"""
+main.py — Master Pipeline Runner
+Online Food Delivery Analysis Project
 
-def run_pipeline():
+Usage:
+    python main.py --step all
+    python main.py --step clean
+    python main.py --step features
+    python main.py --step eda
+    python main.py --step analytics
+    python main.py --step upload
+"""
 
-    df = load_data("data/ONINE_FOOD_DELIVERY_ANALYSIS.csv")
-    df = clean_data(df)
-    df = add_features(df)
+import argparse
+import sys
+import os
 
-    insert_data(df)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-    # Customer Analysis
-    top_spending_customers(df)
-    age_group_vs_order_value(df)
-    weekend_vs_weekday(df)
+RAW_PATH      = "data/raw/ONINE_FOOD_DELIVERY_ANALYSIS.csv"
+CLEANED_PATH  = "data/cleaned/cleaned_food_delivery.csv"
+FEATURED_PATH = "data/cleaned/featured_food_delivery.csv"
 
-    # Revenue & Profilt
-    monthly_revenue_trend(df)
-    discount_impact_on_profit(df)
-    high_revenue_city_cuisine(df)
 
-    # Delivery
-    avg_delivery_time_by_city(df)
-    distance_vs_delivery_time(df)
-    rating_vs_delivery_time(df)
+def run_all():
+    import pandas as pd
+    from scripts.data_cleaning       import clean_data
+    from scripts.feature_engineering import engineer_features
+    from scripts.eda                 import run_eda
+    from scripts.analytics           import run_all_analytics
 
-    # Restaurant
-    top_rated_restaurants(df)
-    cancellation_rate_by_restaurant(df)
-    cuisine_performance(df)
+    print("\n🚀 RUNNING FULL PIPELINE\n" + "═" * 55)
 
-    # Operational
-    peak_hour_analysis(df)
-    payment_mode_preferences(df)
-    cancellation_reason_analysis(df)
+    df_clean = clean_data(RAW_PATH, CLEANED_PATH)
 
-    # revenue_by_city(df)
+    df_feat = engineer_features(df_clean.copy())
+    os.makedirs(os.path.dirname(FEATURED_PATH), exist_ok=True)
+    df_feat.to_csv(FEATURED_PATH, index=False)
+    print(f"💾 Featured data saved: {FEATURED_PATH}")
 
-    upload_to_mysql(df)
+    run_eda(df_feat)
+    run_all_analytics(df_feat)
+
+    print("\n🎉 Pipeline complete!")
+    print("   ➡️  Charts saved to: outputs/")
+    print("   ➡️  Run dashboard: streamlit run dashboard/app.py")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Food Delivery Analysis Pipeline')
+    parser.add_argument('--step', default='all',
+                        choices=['all', 'clean', 'features', 'eda', 'analytics', 'upload'])
+    args = parser.parse_args()
+
+    import pandas as pd
+
+    if args.step == 'all':
+        run_all()
+
+    elif args.step == 'clean':
+        from scripts.data_cleaning import clean_data
+        clean_data(RAW_PATH, CLEANED_PATH)
+
+    elif args.step == 'features':
+        from scripts.feature_engineering import engineer_features
+        df = pd.read_csv(CLEANED_PATH)
+        df = engineer_features(df)
+        df.to_csv(FEATURED_PATH, index=False)
+        print(f"💾 Saved: {FEATURED_PATH}")
+
+    elif args.step == 'eda':
+        from scripts.eda import run_eda
+        df = pd.read_csv(FEATURED_PATH)
+        run_eda(df)
+
+    elif args.step == 'analytics':
+        from scripts.analytics import run_all_analytics
+        df = pd.read_csv(FEATURED_PATH)
+        run_all_analytics(df)
+
+    elif args.step == 'upload':
+        from scripts.db_upload import run_upload
+        run_upload()
+
 
 if __name__ == "__main__":
-    run_pipeline()
+    main()
