@@ -387,22 +387,37 @@ with col3:
                ['Cancellation_Reason'].value_counts().head(8))
     if not reasons.empty:
         fig, ax = plt.subplots(figsize=(6, 4))
-        ax.barh(reasons.index, reasons.values, color=sns.color_palette('Reds_r', len(reasons)))
-        ax.set_xlabel('Count')
+        wedges, texts, autotexts = ax.pie(
+            reasons.values, labels=reasons.index, autopct='%1.1f%%',
+            colors=sns.color_palette('Set2', len(reasons)), startangle=90)
+        for t in autotexts: t.set_fontsize(8)
         ax.set_title(f'Cancellation Reasons\n(Rate: {cancel_rate:.1f}%)')
-        ax.invert_yaxis()
-        ax.tick_params(axis='y', labelsize=8)
         plt.tight_layout()
         show_fig(fig)
 
-# ── RAW DATA TABLE ────────────────────────────────────────────────
-st.markdown("---")
-with st.expander("📋 View Raw Data (first 500 rows)"):
-    display_cols = ['Order_ID','Customer_ID','City','Cuisine_Type','Order_Value',
-                    'Discount_Applied','Delivery_Time_Min','Order_Status',
-                    'Restaurant_Name','Restaurant_Rating','Delivery_Rating','Profit_Margin']
-    show_cols = [c for c in display_cols if c in df.columns]
-    st.dataframe(df[show_cols].head(500), use_container_width=True)
+# with col3:
+#     st.markdown("**Task 15 — Cancellation Reasons**")
+#     cancelled_df = df[df['Order_Status'].str.lower().str.contains('cancel', na=False)]
+#     reasons = (cancelled_df[cancelled_df['Cancellation_Reason'] != 'Not Cancelled']
+#                ['Cancellation_Reason'].value_counts().head(8))
+#     if not reasons.empty:
+#         fig, ax = plt.subplots(figsize=(6, 4))
+#         ax.barh(reasons.index, reasons.values, color=sns.color_palette('Reds_r', len(reasons)))
+#         ax.set_xlabel('Count')
+#         ax.set_title(f'Cancellation Reasons\n(Rate: {cancel_rate:.1f}%)')
+#         ax.invert_yaxis()
+#         ax.tick_params(axis='y', labelsize=8)
+#         plt.tight_layout()
+#         show_fig(fig)
 
-st.markdown("---")
+# ── RAW DATA TABLE ────────────────────────────────────────────────
+# st.markdown("---")
+# with st.expander("📋 View Raw Data (first 500 rows)"):
+#     display_cols = ['Order_ID','Customer_ID','City','Cuisine_Type','Order_Value',
+#                     'Discount_Applied','Delivery_Time_Min','Order_Status',
+#                     'Restaurant_Name','Restaurant_Rating','Delivery_Rating','Profit_Margin']
+#     show_cols = [c for c in display_cols if c in df.columns]
+#     st.dataframe(df[show_cols].head(500), use_container_width=True)
+
+# st.markdown("---")
 # st.markdown("📊 **Online Food Delivery Analysis** · Built with Streamlit & Matplotlib")
