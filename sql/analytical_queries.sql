@@ -82,210 +82,202 @@ CREATE TABLE IF NOT EXISTS financials (
 -- ANALYTICAL QUERIES
 -- ============================================================
 
--- ── Task 1: Top 10 Spending Customers ──
+-- ── Task : All Cities
+SELECT DISTINCT City FROM food_orders 
+    WHERE 1=1 
+    {{WHERE}} 
+    ORDER BY City
+
+-- ── Task : Country Type
+SELECT DISTINCT Cuisine_Type FROM food_orders 
+    WHERE 1=1 
+    {{WHERE}} 
+    ORDER BY Cuisine_Type
+
+-- ── Task : Cancel Status
+SELECT DISTINCT Order_Status FROM food_orders  
+    WHERE 1=1 
+    {{WHERE}} 
+    ORDER BY Order_Status
+
+-- ── Task : KPI Summary
+
 SELECT
-    c.customer_id,
-    c.customer_name,
-    COUNT(o.order_id)       AS total_orders,
-    SUM(o.order_value)      AS total_spend,
-    AVG(o.order_value)      AS avg_order_value
-FROM orders o
-JOIN customers c ON o.customer_id = c.customer_id
-WHERE o.order_status != 'Cancelled'
-GROUP BY c.customer_id, c.customer_name
-ORDER BY total_spend DESC
-LIMIT 10;
+        COUNT(*) AS total_orders,
+        SUM(Order_Value) AS total_revenue,
+        AVG(Order_Value) AS avg_order_value,
+        AVG(Delivery_Time_Min) AS avg_delivery_time,
+        AVG(Delivery_Rating) AS avg_rating,
+        SUM(CASE WHEN LOWER(Order_Status) LIKE '%%cancel%%' THEN 1 ELSE 0 END)
+            * 100.0 / COUNT(*) AS cancel_rate,
+        AVG(profit_margin_pct)  AS avg_profit_margin
+    FROM food_orders
+    WHERE 1=1
+    {{WHERE}}
+
+-- ── Task : Top 10 Spending Customers
+SELECT Customer_ID, SUM(Order_Value) AS total_spend
+         FROM food_orders
+         WHERE 1=1 
+         {{WHERE}}
+         GROUP BY Customer_ID
+         ORDER BY total_spend DESC LIMIT 10
+
+-- ── Task : Age Group vs Order Value
+SELECT 
+        customer_age_group, 
+        AVG(Order_Value) AS avg_value, 
+        COUNT(*) AS cnt
+    FROM food_orders 
+    WHERE 1=1
+    {{WHERE}}
+    AND customer_age_group IS NOT NULL
+    GROUP BY customer_age_group
+    ORDER BY FIELD(customer_age_group,'<18','18-25','26-35','36-45','46-60','60+');
 
 
--- ── Task 2: Age Group vs Order Value ──
+-- ── Task : Weekend vs Weekday Order Patterns
+SELECT order_day_type AS order_day_type,
+               COUNT(*) AS order_count,
+               AVG(Order_Value) AS avg_value
+    FROM food_orders 
+    WHERE 1=1
+    {{WHERE}}
+    AND order_day_type IS NOT NULL
+    GROUP BY order_day_type
+
+
+-- ── Task : Monthly Revenue Trends
+SELECT DATE_FORMAT(Order_Date, '%%Y-%%m') AS month,
+               SUM(Order_Value) AS revenue
+    FROM food_orders  
+    WHERE 1=1
+    {{WHERE}}
+    AND Order_Date IS NOT NULL
+    GROUP BY month ORDER BY month
+
+
+-- ── Task : Discount Impact on Profit
 SELECT
-    CASE
-        WHEN c.customer_age < 18             THEN 'Under 18'
-        WHEN c.customer_age BETWEEN 18 AND 25 THEN '18-25'
-        WHEN c.customer_age BETWEEN 26 AND 35 THEN '26-35'
-        WHEN c.customer_age BETWEEN 36 AND 45 THEN '36-45'
-        WHEN c.customer_age BETWEEN 46 AND 60 THEN '46-60'
-        ELSE '60+'
-    END AS age_group,
-    COUNT(o.order_id)   AS total_orders,
-    AVG(o.order_value)  AS avg_order_value,
-    SUM(o.order_value)  AS total_revenue
-FROM orders o
-JOIN customers c ON o.customer_id = c.customer_id
-GROUP BY age_group
-ORDER BY avg_order_value DESC;
+            CASE
+                WHEN Discount_Applied = 0        THEN 'No Discount'
+                WHEN Discount_Applied <= 50      THEN 'Low (1-50)'
+                WHEN Discount_Applied <= 100     THEN 'Medium (51-100)'
+                WHEN Discount_Applied <= 150     THEN 'High (101-150)'
+                ELSE 'Very High (150+)'
+            END AS discount_tier,
+            AVG(Profit_Margin) * 100 AS avg_profit_margin,
+            COUNT(*) AS cnt
+        FROM food_orders 
+        WHERE 1=1
+        {{WHERE}}
+        GROUP BY discount_tier
+        ORDER BY MIN(Discount_Applied)
 
 
--- ── Task 3: Weekend vs Weekday Order Patterns ──
+-- ── Task : High-Revenue Cities
+SELECT City, SUM(Order_Value) AS revenue
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+        GROUP BY City
+        ORDER BY revenue DESC
+        LIMIT 5
+
+-- ── Task : High-Revenue Country
+SELECT Cuisine_Type, SUM(Order_Value) AS revenue
+        FROM food_orders
+        WHERE 1=1 
+        {{WHERE}}
+        GROUP BY Cuisine_Type
+        ORDER BY revenue DESC
+        LIMIT 5
+
+
+-- ── Task : Avg Delivery Time by City
+SELECT City, AVG(Delivery_Time_Min) AS avg_time
+        FROM food_orders
+        WHERE 1=1 
+        {{WHERE}}
+        GROUP BY City
+        ORDER BY avg_time DESC
+        LIMIT 10
+
+
+-- ── Task : Distance vs Delivery Delay
+SELECT Distance_km, Delivery_Time_Min
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+          AND Distance_km IS NOT NULL
+          AND Delivery_Time_Min IS NOT NULL
+        ORDER BY RAND() LIMIT 3000
+
+
+-- ── Task : Delivery Rating vs Delivery Time
+SELECT ROUND(Delivery_Rating) AS rating,
+               AVG(Delivery_Time_Min) AS avg_time
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+          AND Delivery_Rating IS NOT NULL
+        GROUP BY rating ORDER BY rating
+
+
+-- ── Task : Top Rated Restaurants
+SELECT Restaurant_Name,
+               AVG(Restaurant_Rating) AS avg_rating,
+               COUNT(*) AS total_orders
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+        GROUP BY Restaurant_Name
+        HAVING total_orders >= 30
+        ORDER BY avg_rating DESC LIMIT 10
+
+
+-- ── Task : Cancellation Rate by Restaurant
+SELECT Restaurant_Name,
+               COUNT(*) AS total_orders,
+               SUM(CASE WHEN LOWER(Order_Status) LIKE '%%cancel%%' THEN 1 ELSE 0 END)
+               * 100.0 / COUNT(*) AS cancel_rate
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+        GROUP BY Restaurant_Name
+        HAVING total_orders >= 30
+        ORDER BY cancel_rate DESC LIMIT 10;
+
+
+-- ── Task : Cuisine-wise Performance
+SELECT Cuisine_Type,
+               AVG(Order_Value) AS avg_value,
+               AVG(Restaurant_Rating) AS avg_rating
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+        GROUP BY Cuisine_Type
+        ORDER BY COUNT(*) DESC LIMIT 8
+
+
+-- ── Task : Peak Hour Demand
 SELECT
-    CASE WHEN DAYOFWEEK(o.order_date) IN (1, 7) THEN 'Weekend' ELSE 'Weekday' END AS day_type,
-    COUNT(*)            AS total_orders,
-    AVG(o.order_value)  AS avg_order_value,
-    SUM(o.order_value)  AS total_revenue
-FROM orders o
-GROUP BY day_type;
+            CASE WHEN Peak_Hour = 1 THEN 'Peak Hour' ELSE 'Non-Peak' END AS hour_type,
+            COUNT(*) AS order_count,
+            AVG(Order_Value) AS avg_value
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+        GROUP BY hour_type
 
 
--- ── Task 4: Monthly Revenue Trends ──
-SELECT
-    DATE_FORMAT(order_date, '%Y-%m')    AS month,
-    COUNT(*)                            AS total_orders,
-    SUM(order_value)                    AS total_revenue,
-    AVG(order_value)                    AS avg_order_value
-FROM orders
-WHERE order_status != 'Cancelled'
-GROUP BY month
-ORDER BY month;
+-- ── Task : Payment Mode Preferences
+SELECT Payment_Mode, COUNT(*) AS cnt
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+          AND Payment_Mode IS NOT NULL
+        GROUP BY Payment_Mode ORDER BY cnt DESC
 
 
--- ── Task 5: Discount Impact on Profit ──
-SELECT
-    CASE
-        WHEN o.discount_amount = 0             THEN 'No Discount'
-        WHEN o.discount_amount BETWEEN 1 AND 50 THEN 'Low (1-50)'
-        WHEN o.discount_amount BETWEEN 51 AND 150 THEN 'Medium (51-150)'
-        ELSE 'High (150+)'
-    END AS discount_tier,
-    COUNT(*)                AS order_count,
-    AVG(f.profit_margin)    AS avg_profit_margin,
-    SUM(f.revenue)          AS total_revenue
-FROM orders o
-JOIN financials f ON o.order_id = f.order_id
-GROUP BY discount_tier
-ORDER BY avg_profit_margin DESC;
-
-
--- ── Task 6: High-Revenue Cities ──
-SELECT
-    city,
-    COUNT(*)            AS total_orders,
-    SUM(order_value)    AS total_revenue,
-    AVG(order_value)    AS avg_order_value
-FROM orders
-WHERE order_status != 'Cancelled'
-GROUP BY city
-ORDER BY total_revenue DESC
-LIMIT 10;
-
-
--- ── Task 7: Avg Delivery Time by City ──
-SELECT
-    o.city,
-    AVG(d.delivery_time_minutes)    AS avg_delivery_time,
-    MIN(d.delivery_time_minutes)    AS min_delivery_time,
-    MAX(d.delivery_time_minutes)    AS max_delivery_time,
-    COUNT(*)                        AS deliveries
-FROM orders o
-JOIN deliveries d ON o.order_id = d.order_id
-WHERE o.order_status = 'Delivered'
-GROUP BY o.city
-ORDER BY avg_delivery_time DESC
-LIMIT 15;
-
-
--- ── Task 8: Distance vs Delivery Delay ──
-SELECT
-    CASE
-        WHEN d.distance_km <= 3   THEN '0-3 km'
-        WHEN d.distance_km <= 7   THEN '3-7 km'
-        WHEN d.distance_km <= 12  THEN '7-12 km'
-        ELSE '12+ km'
-    END AS distance_range,
-    AVG(d.delivery_time_minutes) AS avg_delivery_time,
-    COUNT(*)                     AS order_count
-FROM deliveries d
-GROUP BY distance_range
-ORDER BY avg_delivery_time;
-
-
--- ── Task 9: Delivery Rating vs Delivery Time ──
-SELECT
-    ROUND(d.delivery_rating) AS rating,
-    AVG(d.delivery_time_minutes) AS avg_delivery_time,
-    COUNT(*) AS order_count
-FROM deliveries d
-WHERE d.delivery_rating IS NOT NULL
-GROUP BY ROUND(d.delivery_rating)
-ORDER BY rating;
-
-
--- ── Task 10: Top Rated Restaurants ──
-SELECT
-    r.restaurant_name,
-    r.cuisine_type,
-    r.city,
-    r.restaurant_rating,
-    COUNT(o.order_id) AS total_orders
-FROM restaurants r
-JOIN orders o ON r.restaurant_id = o.restaurant_id
-GROUP BY r.restaurant_id, r.restaurant_name, r.cuisine_type, r.city, r.restaurant_rating
-HAVING total_orders >= 50
-ORDER BY r.restaurant_rating DESC
-LIMIT 10;
-
-
--- ── Task 11: Cancellation Rate by Restaurant ──
-SELECT
-    r.restaurant_name,
-    COUNT(o.order_id)                                                   AS total_orders,
-    SUM(CASE WHEN o.order_status = 'Cancelled' THEN 1 ELSE 0 END)      AS cancelled_orders,
-    ROUND(
-        SUM(CASE WHEN o.order_status = 'Cancelled' THEN 1 ELSE 0 END)
-        / COUNT(o.order_id) * 100, 2
-    )                                                                   AS cancellation_rate_pct
-FROM orders o
-JOIN restaurants r ON o.restaurant_id = r.restaurant_id
-GROUP BY r.restaurant_id, r.restaurant_name
-HAVING total_orders >= 30
-ORDER BY cancellation_rate_pct DESC
-LIMIT 10;
-
-
--- ── Task 12: Cuisine-wise Performance ──
-SELECT
-    cuisine_type,
-    COUNT(*)            AS total_orders,
-    SUM(order_value)    AS total_revenue,
-    AVG(order_value)    AS avg_order_value,
-    ROUND(
-        SUM(CASE WHEN order_status = 'Cancelled' THEN 1 ELSE 0 END)
-        / COUNT(*) * 100, 2
-    )                   AS cancellation_rate_pct
-FROM orders
-GROUP BY cuisine_type
-ORDER BY total_revenue DESC;
-
-
--- ── Task 13: Peak Hour Demand ──
-SELECT
-    HOUR(order_date)    AS order_hour,
-    COUNT(*)            AS total_orders,
-    SUM(order_value)    AS total_revenue
-FROM orders
-GROUP BY order_hour
-ORDER BY order_hour;
-
-
--- ── Task 14: Payment Mode Preferences ──
-SELECT
-    payment_mode,
-    COUNT(*)            AS total_orders,
-    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM orders), 2) AS pct_share,
-    AVG(order_value)    AS avg_order_value
-FROM orders
-GROUP BY payment_mode
-ORDER BY total_orders DESC;
-
-
--- ── Task 15: Cancellation Reason Analysis ──
-SELECT
-    cancellation_reason,
-    COUNT(*)            AS cancellation_count,
-    ROUND(COUNT(*) * 100.0 / (
-        SELECT COUNT(*) FROM orders WHERE order_status = 'Cancelled'
-    ), 2)               AS pct_of_cancellations
-FROM orders
-WHERE order_status = 'Cancelled'
-  AND cancellation_reason IS NOT NULL
-GROUP BY cancellation_reason
-ORDER BY cancellation_count DESC;
+-- ── Task : Cancellation Reason Analysis
+SELECT Cancellation_Reason, COUNT(*) AS cnt
+        FROM food_orders
+        WHERE 1=1 {{WHERE}}
+          AND LOWER(Order_Status) LIKE '%%cancel%%'
+          AND Cancellation_Reason IS NOT NULL
+          AND Cancellation_Reason != 'Not Cancelled'
+        GROUP BY Cancellation_Reason
+        ORDER BY cnt DESC LIMIT 8

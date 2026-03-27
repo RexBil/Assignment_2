@@ -79,8 +79,8 @@ def main():
         run_all_analytics(df)
 
     elif args.step == 'upload':
-        from scripts.db_upload import run_upload
-        run_upload()
+        from scripts.db_upload import upload_data
+        upload_data()
 
 
 if __name__ == "__main__":
